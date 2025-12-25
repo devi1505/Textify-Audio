@@ -1,53 +1,69 @@
-from flask import Flask, request, render_template
-import os
+from flask import Flask, request, render_template_string
 import whisper
 import mysql.connector
+import os
 
 app = Flask(__name__)
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load Whisper model
-model = whisper.load_model("base")
-
-# Database connection
+# 🔹 MySQL connection
 mydb = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="YOUR_PASSWORD",  # replace with your MySQL password
+    password="437561",  # Replace with your MySQL password
     database="call_text_db"
 )
 cursor = mydb.cursor()
 
-def convert_audio_to_text(filepath, language=None):
-    if language:
-        result = model.transcribe(filepath, language=language)
-    else:
-        result = model.transcribe(filepath)
-    return result["text"]
+# 🔹 Load Whisper model
+model = whisper.load_model("small")
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+# 🔹 HTML template
+HTML_PAGE = """
+<!DOCTYPE html>
+<html>
+<head>
+<title>Textify Audio - MySQL Version</title>
+<style>
+body {font-family: Arial; text-align: center; margin-top: 50px;}
+input {margin: 20px;}
+</style>
+</head>
+<body>
+<h1>🎤 Textify Audio (MySQL Version)</h1>
+<p>Upload audio to convert to text</p>
+<form method="POST" enctype="multipart/form-data">
+<input type="file" name="audio" required><br>
+<button type="submit">Convert</button>
+</form>
+{% if text %}
+<h2>Result:</h2>
+<p>{{ text }}</p>
+{% endif %}
+</body>
+</html>
+"""
 
-@app.route("/upload", methods=["POST"])
+@app.route("/", methods=["GET","POST"])
 def upload_audio():
-    file = request.files["audiofile"]
-    if file:
-        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    text_output = ""
+    
+    if request.method == "POST":
+        file = request.files["audio"]
+        # Create uploads folder if not exist
+        os.makedirs("uploads", exist_ok=True)
+        filepath = os.path.join("uploads", file.filename)
         file.save(filepath)
 
-        # Convert audio to text
-        text = convert_audio_to_text(filepath)
+        # 🔹 Transcribe audio using Whisper
+        result = model.transcribe(filepath)
+        text_output = result["text"]
 
-        # Save to DB
-        sql = "INSERT INTO transcriptions (file_name, text) VALUES (%s, %s)"
-        cursor.execute(sql, (file.filename, text))
+        # 🔹 Save to MySQL
+        query = "INSERT INTO transcripts (filename, text) VALUES (%s, %s)"
+        cursor.execute(query, (file.filename, text_output))
         mydb.commit()
 
-        return f"<h2>Transcription:</h2><p>{text}</p>"
-
-    return "No file uploaded!"
+    return render_template_string(HTML_PAGE, text=text_output)
 
 if __name__ == "__main__":
     app.run(debug=True)

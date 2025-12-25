@@ -35,11 +35,6 @@ CREATE TABLE transcriptions (
     language VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+git add .
 python app.py
 http://127.0.0.1:5000
-
----
-
-This is **ready-to-use** — just create `README.md` in your project folder, paste this content, save it, and it will appear nicely on GitHub.  
-
-Do you want me to now give the **final 5 simple commands to upload everything to GitHub**?

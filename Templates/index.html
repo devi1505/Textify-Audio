@@ -1,13 +1,80 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Textify Audio</title>
+<title>Textify Audio</title>
+
+<style>
+body {
+    margin: 0;
+    height: 100vh;
+    font-family: Arial;
+    background: linear-gradient(120deg, #2b3a8f, #1fd1f9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.card {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    padding: 40px;
+    width: 450px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    color: white;
+    text-align: center;
+}
+
+input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    margin-top: 20px;
+}
+
+button {
+    margin-top: 20px;
+    width: 100%;
+    background: orange;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.output {
+    margin-top: 25px;
+    background: white;
+    color: black;
+    padding: 15px;
+    border-radius: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+</style>
 </head>
+
 <body>
-    <h1>Upload Audio File</h1>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="audiofile" required>
-        <button type="submit">Convert to Text</button>
+
+<div class="card">
+    <h1>🎧 Textify Audio</h1>
+    <p>Upload your audio file and convert it to text instantly.</p>
+
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="audio" required>
+        <button type="submit">Convert to Text 📄</button>
     </form>
+
+    {% if transcription %}
+    <div class="output">
+        <b>Transcribed Text:</b><br><br>
+        {{ transcription }}
+    </div>
+    {% endif %}
+</div>
+
 </body>
 </html>

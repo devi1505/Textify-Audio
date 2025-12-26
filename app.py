@@ -1,69 +1,62 @@
-from flask import Flask, request, render_template_string
+import os
+from flask import Flask, request, render_template
 import whisper
 import mysql.connector
-import os
+
+# Tell Whisper where FFmpeg is
+os.environ["PATH"] += os.pathsep + r"C:\Users\amarj\Desktop\ffmpeg-2025-12-24-git-abb1524138-essentials_build\bin"
 
 app = Flask(__name__)
 
-# 🔹 MySQL connection
-mydb = mysql.connector.connect(
+# Load Whisper model
+model = whisper.load_model("base")
+
+# MySQL connection
+db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="437561",  # Replace with your MySQL password
+    password="437561",   # <-- your MySQL password
     database="call_text_db"
 )
-cursor = mydb.cursor()
+cursor = db.cursor()
 
-# 🔹 Load Whisper model
-model = whisper.load_model("small")
+# -------------------------------
+# HOME PAGE - Upload & Transcribe
+# -------------------------------
+@app.route("/", methods=["GET", "POST"])
+def home():
+    transcription = ""
 
-# 🔹 HTML template
-HTML_PAGE = """
-<!DOCTYPE html>
-<html>
-<head>
-<title>Textify Audio - MySQL Version</title>
-<style>
-body {font-family: Arial; text-align: center; margin-top: 50px;}
-input {margin: 20px;}
-</style>
-</head>
-<body>
-<h1>🎤 Textify Audio (MySQL Version)</h1>
-<p>Upload audio to convert to text</p>
-<form method="POST" enctype="multipart/form-data">
-<input type="file" name="audio" required><br>
-<button type="submit">Convert</button>
-</form>
-{% if text %}
-<h2>Result:</h2>
-<p>{{ text }}</p>
-{% endif %}
-</body>
-</html>
-"""
-
-@app.route("/", methods=["GET","POST"])
-def upload_audio():
-    text_output = ""
-    
     if request.method == "POST":
         file = request.files["audio"]
-        # Create uploads folder if not exist
+
         os.makedirs("uploads", exist_ok=True)
         filepath = os.path.join("uploads", file.filename)
         file.save(filepath)
 
-        # 🔹 Transcribe audio using Whisper
+        print("Processing:", filepath)
+
         result = model.transcribe(filepath)
-        text_output = result["text"]
+        transcription = result["text"]
 
-        # 🔹 Save to MySQL
-        query = "INSERT INTO transcripts (filename, text) VALUES (%s, %s)"
-        cursor.execute(query, (file.filename, text_output))
-        mydb.commit()
+        # Save into MySQL
+        sql = "INSERT INTO transcripts (filename, text) VALUES (%s, %s)"
+        cursor.execute(sql, (file.filename, transcription))
+        db.commit()
 
-    return render_template_string(HTML_PAGE, text=text_output)
+    return render_template("index.html", transcription=transcription)
 
+# -------------------------------
+# HISTORY PAGE
+# -------------------------------
+@app.route("/history")
+def history():
+    cursor.execute("SELECT filename, text, created_at FROM transcripts ORDER BY id DESC")
+    records = cursor.fetchall()
+    return render_template("history.html", records=records)
+
+# -------------------------------
+# RUN APP
+# -------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
